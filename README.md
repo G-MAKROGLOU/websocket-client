@@ -86,7 +86,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/G-MAKROGLOU/websocket-client"
+	client "github.com/G-MAKROGLOU/websocket-client"
 	"sync"
 	"time"
 )
