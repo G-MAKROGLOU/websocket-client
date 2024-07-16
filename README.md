@@ -77,7 +77,7 @@ func (c CustomEvents) OnSendError(err error){
 # CLIENT (client.go)
 
 <p>
-    Start the client. Place client.Receive() in a goroutine so you have the main thread free for other operations. Free the workgroup when you are done.
+    Start the client. Place client.Receive() in a goroutine so you have the main thread free for other operations. Free the waitGroup when you are done.
 </p>
 
 
