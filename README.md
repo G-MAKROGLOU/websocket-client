@@ -7,7 +7,7 @@
 
 
 ```go
-package testruns
+package main
 
 import (
     "encoding/json"
