@@ -132,7 +132,7 @@ func (sc *SocketClient) Send(data map[string]interface{}) {
 	sc.events.OnSend(data)
 }
 
-// SendTo sends a unitcast/multicast message to all sockets in a room
+// SendTo sends a unicast/multicast message to all sockets in a room
 func (sc *SocketClient) SendTo(roomName string, data map[string]interface{}) {
 	data["Gm_Ws_Type"] = "gm_ws_multicast"
 	data["Gm_Ws_Room"] = roomName
