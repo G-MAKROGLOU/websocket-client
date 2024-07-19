@@ -73,7 +73,7 @@ func (sc *SocketClient) Disconnect() {
 	data := map[string]interface{}{
 		"Type": "gm_ws_disconnect",
 	}
-	sc.Send(data)
+	sc.SendJSON(data)
 	if err := sc.Conn.Close(); err != nil {
 		sc.events.OnDisconnectError(err)
 		return
@@ -144,8 +144,9 @@ func (sc *SocketClient) Leave(roomName string) {
 	sc.events.OnLeave(roomName)
 }
 
-// Send sends a broadcast message to all connected sockets on the server
-func (sc *SocketClient) Send(data map[string]interface{}) {
+// SendJSON sends a broadcast message to all connected sockets on the server. Can be used with any server that supports JSON, but it will add an extra property
+// in case it is used with github.com/G-MAKROGLOU/websocket-server that supports rooms.
+func (sc *SocketClient) SendJSON(data map[string]interface{}) {
 	data["Gm_Ws_Type"] = "gm_ws_broadcast"
 
 	err := websocket.JSON.Send(sc.Conn, data)
@@ -156,8 +157,9 @@ func (sc *SocketClient) Send(data map[string]interface{}) {
 	sc.events.OnSend(data)
 }
 
-// SendTo sends a unicast/multicast message to all sockets in a room
-func (sc *SocketClient) SendTo(roomName string, data map[string]interface{}) {
+// SendJSONTo sends a unicast/multicast message to all sockets in a rooml. Can be used with any server that supports JSON, but it will add an extra property
+// in case it is used with github.com/G-MAKROGLOU/websocket-server that supports rooms.
+func (sc *SocketClient) SendJSONTo(roomName string, data map[string]interface{}) {
 	data["Gm_Ws_Type"] = "gm_ws_multicast"
 	data["Gm_Ws_Room"] = roomName
 
@@ -169,6 +171,21 @@ func (sc *SocketClient) SendTo(roomName string, data map[string]interface{}) {
 	sc.events.OnSend(data)
 }
 
+// SendText sends text over the wire. Can be used with any socket server that comminicates with text. Not supported by github.com/G-MAKROGLOU/websocket-server
+func (sc *SocketClient) SendText(msg interface{}) {
+	
+	b, _ := json.Marshal(msg)
+	
+	_, err := sc.Conn.Write(b)
+
+	if err != nil {
+		sc.events.OnSendError(err)
+		return
+	}
+	var data map[string]interface{}
+	json.Unmarshal(b, &data)
+	sc.events.OnSend(data)
+}
 
 
 
