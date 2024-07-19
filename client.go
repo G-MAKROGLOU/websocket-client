@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/json"
 	"net/http"
 	"sync"
 
@@ -35,8 +36,8 @@ type SocketClientEvents interface {
 	OnSendError(err error)
 }
 
-// NewSocketClient creates a new SocketClient
-func NewSocketClient(origin string, server string, events SocketClientEvents) *SocketClient {
+// NewClient creates a new SocketClient
+func NewClient(origin string, server string, events SocketClientEvents) *SocketClient {
 	return &SocketClient{
 		Origin: origin,
 		Server: server,
@@ -80,8 +81,8 @@ func (sc *SocketClient) Disconnect() {
 	sc.events.OnDisconnect()
 }
 
-// Receive handles incoming messages. To be started in a goroutine
-func (sc *SocketClient) Receive() {
+// ReceiveJSON handles incoming messages. To be started in a goroutine
+func (sc *SocketClient) ReceiveJSON() {
 	for {
 		var data map[string]interface{}
 		if err := websocket.JSON.Receive(sc.Conn, &data); err != nil {
@@ -90,7 +91,30 @@ func (sc *SocketClient) Receive() {
 		}
 		sc.events.OnReceive(data)
 	}
-} 
+}
+
+// ReceiveText handles text incoming messages that you can deserialize to whatver type you want
+// in the OnReceive event. Suitable for connections to servers that are not created with the github.com/G-MAKROGLOU/websocket-server 
+// package.
+func (sc *SocketClient) ReceiveText() {
+	for {
+		var data map[string]interface{}
+		var buff = make([]byte, 4096)
+
+		size, err := sc.Conn.Read(buff)
+		if err != nil {
+			sc.events.OnReceiveError(err)
+			continue
+		}
+
+		umErr := json.Unmarshal(buff[:size], &data)
+		if umErr != nil {
+			sc.events.OnReceiveError(err)
+		}
+
+		sc.events.OnReceive(data)
+	}
+}
 
 // Join adds a socket to a room (1-N message exchange)
 func (sc *SocketClient) Join(roomName string) {
