@@ -104,7 +104,7 @@ func main() {
     data = map[string]interface{}{
 	"msg": "pong",
     }
-    c2.SendJSON(data)
+    c1.SendJSON(data)
 
     // join a room
     c1.Join("test")
