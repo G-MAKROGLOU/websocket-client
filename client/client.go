@@ -11,8 +11,6 @@ import (
 
 var wg sync.WaitGroup
 
-
-
 // New creates a new SocketClient
 func New(origin string, server string, events SocketClientEvents) *SocketClient {
 	return &SocketClient{
@@ -47,7 +45,7 @@ func (sc *SocketClient) Connect() error {
 // Disconnect disconnects from the server
 func (sc *SocketClient) Disconnect() error {
 	data := map[string]interface{}{
-		"Type": "gm_ws_disconnect",
+		"GmWsType": "gm_ws_disconnect",
 	}
 	sc.SendJSON(data)
 	if err := sc.Conn.Close(); err != nil {
@@ -95,8 +93,8 @@ func (sc *SocketClient) ReceiveText() {
 // Join adds a socket to a room (1-N message exchange)
 func (sc *SocketClient) Join(roomName string) {
 	data := map[string]interface{}{
-		"Gm_Ws_Type": "gm_ws_join",
-		"Gm_Ws_Room": roomName,
+		"GmWsType": "gm_ws_join",
+		"GmWsRoom": roomName,
 	}
 	err := websocket.JSON.Send(sc.Conn, data)
 	if err != nil {
@@ -109,8 +107,8 @@ func (sc *SocketClient) Join(roomName string) {
 // Leave leaves a room
 func (sc *SocketClient) Leave(roomName string) {
 	data := map[string]interface{}{
-		"Gm_Ws_Type": "gm_ws_leave",
-		"Gm_Ws_Room": roomName,
+		"GmWsType": "gm_ws_leave",
+		"GmWsRoom": roomName,
 	}
 	err := websocket.JSON.Send(sc.Conn, data)
 	if err != nil {
@@ -123,7 +121,7 @@ func (sc *SocketClient) Leave(roomName string) {
 // SendJSON sends a broadcast message to all connected sockets on the server. Can be used with any server that supports JSON, but it will add an extra property
 // in case it is used with github.com/G-MAKROGLOU/websocket-server that supports rooms.
 func (sc *SocketClient) SendJSON(data map[string]interface{}) {
-	data["Gm_Ws_Type"] = "gm_ws_broadcast"
+	data["GmWsType"] = "gm_ws_broadcast"
 
 	err := websocket.JSON.Send(sc.Conn, data)
 	if err != nil {
@@ -136,8 +134,8 @@ func (sc *SocketClient) SendJSON(data map[string]interface{}) {
 // SendJSONTo sends a unicast/multicast message to all sockets in a rooml. Can be used with any server that supports JSON, but it will add an extra property
 // in case it is used with github.com/G-MAKROGLOU/websocket-server that supports rooms.
 func (sc *SocketClient) SendJSONTo(roomName string, data map[string]interface{}) {
-	data["Gm_Ws_Type"] = "gm_ws_multicast"
-	data["Gm_Ws_Room"] = roomName
+	data["GmWsType"] = "gm_ws_multicast"
+	data["GmWsRoom"] = roomName
 
 	err := websocket.JSON.Send(sc.Conn, data)
 	if err != nil {
