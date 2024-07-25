@@ -19,55 +19,55 @@ import (
 // CustomEvents implements the SocketClientEvents interface
 type CustomEvents struct {}
 
-func (c CustomEvents) OnConnect(ws *websocket.Conn, sessID string) {
+func (c CustomEvents) onConnect(ws *websocket.Conn, sessID string) {
     fmt.Println("[CLIENT] Connected with session ID: ", sessID)
 }
 
-func (c CustomEvents) OnConnectError(err error){
+func (c CustomEvents) onConnectError(err error){
     fmt.Println("[CLIENT] Failed to connect: ", err)
 }
 
-func (c CustomEvents) OnDisconnect(){
+func (c CustomEvents) onDisconnect(){
     fmt.Println("[CLIENT] Disconnected" )
 }
 
-func (c CustomEvents) OnDisconnectError(err error){
+func (c CustomEvents) onDisconnectError(err error){
     fmt.Println("[CLIENT] Failed to disconnect: ", err)
 }
 
-func (c CustomEvents) OnReceive(data map[string]interface{}){
+func (c CustomEvents) onReceive(data map[string]interface{}){
     b, _ := json.MarshalIndent(data, "", " ")
 
     fmt.Println("[CLIENT] RECEIVED: ", string(b))
 }
 
-func (c CustomEvents) OnReceiveError(err error){
+func (c CustomEvents) onReceiveError(err error){
     fmt.Println("[CLIENT] Failed to receive: ", err)
 }
 
-func (c CustomEvents) OnJoin(roomName string){
+func (c CustomEvents) onJoin(roomName string){
     fmt.Println("[CLIENT] Joined room ", roomName)
 }
 
-func (c CustomEvents) OnJoinError(roomName string, err error){
+func (c CustomEvents) onJoinError(roomName string, err error){
     fmt.Println("[CLIENT] Failed to join room: ", roomName, " ", err)
 }
 
-func (c CustomEvents) OnLeave(roomName string){
+func (c CustomEvents) onLeave(roomName string){
     fmt.Println("[CLIENT] Left room: ", roomName)
 }
 
-func (c CustomEvents) OnLeaveError(roomName string, err error){
+func (c CustomEvents) onLeaveError(roomName string, err error){
     fmt.Println("[CLIENT] Failed to leave room: ", roomName, " ",  err)
 }
 
-func (c CustomEvents) OnSend(data map[string]interface{}){
+func (c CustomEvents) onSend(data map[string]interface{}){
     b, _ := json.MarshalIndent(data, "", " ")
 
     fmt.Println("[CLIENT] SENT: ", string(b))
 }
 
-func (c CustomEvents) OnSendError(err error){
+func (c CustomEvents) onSendError(err error){
     fmt.Println("[CLIENT] Failed to send: ", err)
 }
 

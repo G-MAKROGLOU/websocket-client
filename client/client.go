@@ -11,33 +11,10 @@ import (
 
 var wg sync.WaitGroup
 
-// SocketClient represents a socket client connection 
-type SocketClient struct {
-	ID string
-	Origin string
-	Server string
-	Conn *websocket.Conn
-	events SocketClientEvents
-}
 
-// SocketClientEvents holds all the possible events that are supported
-type SocketClientEvents interface {
-	OnConnect(ws *websocket.Conn, sessID string)
-	OnConnectError(err error)
-	OnDisconnect()
-	OnDisconnectError(err error)
-	OnReceive(data map[string]interface{})
-	OnReceiveError(err error)
-	OnJoin(roomName string)
-	OnJoinError(roomName string, err error)
-	OnLeave(roomName string)
-	OnLeaveError(roomName string, err error)
-	OnSend(data map[string]interface{})
-	OnSendError(err error)
-}
 
-// NewClient creates a new SocketClient
-func NewClient(origin string, server string, events SocketClientEvents) *SocketClient {
+// New creates a new SocketClient
+func New(origin string, server string, events SocketClientEvents) *SocketClient {
 	return &SocketClient{
 		Origin: origin,
 		Server: server,
@@ -57,28 +34,27 @@ func (sc *SocketClient) Connect() error {
 	
 	ws, err := websocket.DialConfig(config)
 	if err != nil {
-		sc.events.OnConnectError(err)
 		return err
 	}
 
 	sc.Conn = ws
 	sc.ID = id
-	sc.events.OnConnect(ws, id)
+	sc.events.onConnect(ws, id)
 
 	return nil
 }
 
 // Disconnect disconnects from the server
-func (sc *SocketClient) Disconnect() {
+func (sc *SocketClient) Disconnect() error {
 	data := map[string]interface{}{
 		"Type": "gm_ws_disconnect",
 	}
 	sc.SendJSON(data)
 	if err := sc.Conn.Close(); err != nil {
-		sc.events.OnDisconnectError(err)
-		return
+		return err
 	}
-	sc.events.OnDisconnect()
+
+	return nil
 }
 
 // ReceiveJSON handles incoming messages. To be started in a goroutine
@@ -86,15 +62,15 @@ func (sc *SocketClient) ReceiveJSON() {
 	for {
 		var data map[string]interface{}
 		if err := websocket.JSON.Receive(sc.Conn, &data); err != nil {
-			sc.events.OnReceiveError(err)
+			sc.events.onReceiveError(err)
 			break
 		}
-		sc.events.OnReceive(data)
+		sc.events.onReceive(data)
 	}
 }
 
 // ReceiveText handles text incoming messages that you can deserialize to whatver type you want
-// in the OnReceive event. Suitable for connections to servers that are not created with the github.com/G-MAKROGLOU/websocket-server 
+// in the onReceive event. Suitable for connections to servers that are not created with the github.com/G-MAKROGLOU/websocket-server 
 // package.
 func (sc *SocketClient) ReceiveText() {
 	for {
@@ -103,16 +79,16 @@ func (sc *SocketClient) ReceiveText() {
 
 		size, err := sc.Conn.Read(buff)
 		if err != nil {
-			sc.events.OnReceiveError(err)
+			sc.events.onReceiveError(err)
 			continue
 		}
 
 		umErr := json.Unmarshal(buff[:size], &data)
 		if umErr != nil {
-			sc.events.OnReceiveError(err)
+			sc.events.onReceiveError(err)
 		}
 
-		sc.events.OnReceive(data)
+		sc.events.onReceive(data)
 	}
 }
 
@@ -124,10 +100,10 @@ func (sc *SocketClient) Join(roomName string) {
 	}
 	err := websocket.JSON.Send(sc.Conn, data)
 	if err != nil {
-		sc.events.OnJoinError(roomName, err)
+		sc.events.onJoinError(roomName, err)
 		return
 	}
-	sc.events.OnJoin(roomName)
+	sc.events.onJoin(roomName)
 }
 
 // Leave leaves a room
@@ -138,10 +114,10 @@ func (sc *SocketClient) Leave(roomName string) {
 	}
 	err := websocket.JSON.Send(sc.Conn, data)
 	if err != nil {
-		sc.events.OnLeaveError(roomName, err)
+		sc.events.onLeaveError(roomName, err)
 		return
 	}
-	sc.events.OnLeave(roomName)
+	sc.events.onLeave(roomName)
 }
 
 // SendJSON sends a broadcast message to all connected sockets on the server. Can be used with any server that supports JSON, but it will add an extra property
@@ -151,10 +127,10 @@ func (sc *SocketClient) SendJSON(data map[string]interface{}) {
 
 	err := websocket.JSON.Send(sc.Conn, data)
 	if err != nil {
-		sc.events.OnSendError(err)
+		sc.events.onSendError(err)
 		return
 	}
-	sc.events.OnSend(data)
+	sc.events.onSend(data)
 }
 
 // SendJSONTo sends a unicast/multicast message to all sockets in a rooml. Can be used with any server that supports JSON, but it will add an extra property
@@ -165,10 +141,10 @@ func (sc *SocketClient) SendJSONTo(roomName string, data map[string]interface{})
 
 	err := websocket.JSON.Send(sc.Conn, data)
 	if err != nil {
-		sc.events.OnSendError(err)
+		sc.events.onSendError(err)
 		return
 	}
-	sc.events.OnSend(data)
+	sc.events.onSend(data)
 }
 
 // SendText sends text over the wire. Can be used with any socket server that comminicates with text. Not supported by github.com/G-MAKROGLOU/websocket-server
@@ -179,12 +155,12 @@ func (sc *SocketClient) SendText(msg interface{}) {
 	_, err := sc.Conn.Write(b)
 
 	if err != nil {
-		sc.events.OnSendError(err)
+		sc.events.onSendError(err)
 		return
 	}
 	var data map[string]interface{}
 	json.Unmarshal(b, &data)
-	sc.events.OnSend(data)
+	sc.events.onSend(data)
 }
 
 
