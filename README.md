@@ -91,7 +91,7 @@ func main() {
     server := "ws://localhost:3000/ws"
 
     //connect
-    c1 := client.New(origin, server, C1Events{})
+    c1 := client.New(origin, server, Events{})
     if err := c1.Connect(); err != nil {
         slog.Error("failed to connect to server")
         os.Exit(1)
