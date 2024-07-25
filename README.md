@@ -1,4 +1,14 @@
-# JSON client for connection with a server created with github.com/G-MAKROGLOU/websocket-server
+# INSTALLATION 
+
+```go
+go get github.com/G-MAKROGLOU/websocket-client
+
+```
+
+
+# JSON client for connection with a server created with:
+
+```github.com/G-MAKROGLOU/websocket-server```
 
 ## CLIENT (clientevents.go)
 
