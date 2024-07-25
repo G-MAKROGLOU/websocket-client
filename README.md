@@ -93,7 +93,7 @@ import (
 var wg sync.WaitGroup
 
 func main() {
-wg.Add(1)
+    wg.Add(1)
 
     origin := "http://localhost"
     server := "ws://localhost:5000/ws"
