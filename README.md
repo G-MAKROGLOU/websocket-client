@@ -1,7 +1,7 @@
 # INSTALLATION 
 
 ```go
-go get github.com/G-MAKROGLOU/websocket-client
+go get github.com/G-MAKROGLOU/websocket-client@latest
 
 ```
 
