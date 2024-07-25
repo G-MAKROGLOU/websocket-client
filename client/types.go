@@ -13,29 +13,31 @@ type SocketClient struct {
 
 // SocketClientEvents holds all the possible events that are supported
 type SocketClientEvents interface {
-	onConnect(ws *websocket.Conn, sessID string)
-	onReceive(data map[string]interface{})
-	onReceiveError(err error)
-	onJoin(roomName string)
-	onJoinError(roomName string, err error)
-	onLeave(roomName string)
-	onLeaveError(roomName string, err error)
-	onSend(data map[string]interface{})
-	onSendError(err error)
+	OnDisconnectError(err error)
+	OnReceive(data map[string]interface{})
+	OnReceiveError(err error)
+	OnJoinError(roomName string, err error)
+	OnLeaveError(roomName string, err error)
+	OnSendError(err error)
 }
 
 // NOOPSocketClientEvents is a default struct that has no implementation for the Server events
 type NOOPSocketClientEvents struct {}
 
+// OnDisconnectError emitted when the client fails to disconnect
+func (n NOOPSocketClientEvents) OnDisconnectError(err error){}
 
-func (N NOOPSocketClientEvents) onConnect(ws *websocket.Conn, sessID string){}
-func (N NOOPSocketClientEvents) onDisconnect(){}
-func (N NOOPSocketClientEvents) onDisconnectError(err error){}
-func (N NOOPSocketClientEvents) onReceive(data map[string]interface{}){}
-func (N NOOPSocketClientEvents) onReceiveError(err error){}
-func (N NOOPSocketClientEvents) onJoin(roomName string){}
-func (N NOOPSocketClientEvents) onJoinError(roomName string, err error){}
-func (N NOOPSocketClientEvents) onLeave(roomName string){}
-func (N NOOPSocketClientEvents) onLeaveError(roomName string, err error){}
-func (N NOOPSocketClientEvents) onSend(data map[string]interface{}){}
-func (N NOOPSocketClientEvents) onSendError(err error){}
+// OnReceive emitted when the client receives a message. all message handling happens here.
+func (n NOOPSocketClientEvents) OnReceive(data map[string]interface{}){}
+
+// OnReceiveError emitted when the client fails to receive a message
+func (n NOOPSocketClientEvents) OnReceiveError(err error){}
+
+// OnJoinError emitted when the client fails to join a room.
+func (n NOOPSocketClientEvents) OnJoinError(roomName string, err error){}
+
+// OnLeaveError emitted when the client fails to leave a room
+func (n NOOPSocketClientEvents) OnLeaveError(roomName string, err error){}
+
+// OnSendError emitted when the client fails to send a message
+func (n NOOPSocketClientEvents) OnSendError(err error){}

@@ -1,4 +1,6 @@
-# CLIENT (clientevents.go)
+# JSON client for connection with a server created with github.com/G-MAKROGLOU/websocket-server
+
+## CLIENT (clientevents.go)
 
 <p>
     Implement the events interface with the functionality you want to be implemented per event. 
@@ -12,71 +14,55 @@ package main
 import (
     "encoding/json"
     "fmt"
-
-    "golang.org/x/net/websocket"
 )
 
-// CustomEvents implements the SocketClientEvents interface
-type CustomEvents struct {}
+// Events implements SocketClientEvents interface
+type Events struct {}
 
-func (c CustomEvents) onConnect(ws *websocket.Conn, sessID string) {
-    fmt.Println("[CLIENT] Connected with session ID: ", sessID)
+// OnDisconnectError event interface implementation
+func (e Events) OnDisconnectError(err error){
+	fmt.Println("OnDisconnectError: ", err)
 }
 
-func (c CustomEvents) onConnectError(err error){
-    fmt.Println("[CLIENT] Failed to connect: ", err)
+// OnReceive event interface implementation
+func (e Events) OnReceive(data map[string]interface{}){
+	fmt.Println("OnReceive: ", data)
 }
 
-func (c CustomEvents) onDisconnect(){
-    fmt.Println("[CLIENT] Disconnected" )
+// OnReceiveError event interface implementation
+func (e Events) OnReceiveError(err error){
+	if err == io.EOF {
+		fmt.Println("connection closed ")
+	} else {
+		fmt.Println("some error during receive")
+	}
 }
 
-func (c CustomEvents) onDisconnectError(err error){
-    fmt.Println("[CLIENT] Failed to disconnect: ", err)
+// OnJoinError event interface implementation
+func (e Events) OnJoinError(roomName string, err error){
+	fmt.Println("OnJoinError: ", roomName, err)
 }
 
-func (c CustomEvents) onReceive(data map[string]interface{}){
-    b, _ := json.MarshalIndent(data, "", " ")
-
-    fmt.Println("[CLIENT] RECEIVED: ", string(b))
+// OnLeaveError event interface implementation
+func (e Events) OnLeaveError(roomName string, err error){
+	fmt.Println("OnLeaveError: ", roomName, err)
 }
 
-func (c CustomEvents) onReceiveError(err error){
-    fmt.Println("[CLIENT] Failed to receive: ", err)
-}
-
-func (c CustomEvents) onJoin(roomName string){
-    fmt.Println("[CLIENT] Joined room ", roomName)
-}
-
-func (c CustomEvents) onJoinError(roomName string, err error){
-    fmt.Println("[CLIENT] Failed to join room: ", roomName, " ", err)
-}
-
-func (c CustomEvents) onLeave(roomName string){
-    fmt.Println("[CLIENT] Left room: ", roomName)
-}
-
-func (c CustomEvents) onLeaveError(roomName string, err error){
-    fmt.Println("[CLIENT] Failed to leave room: ", roomName, " ",  err)
-}
-
-func (c CustomEvents) onSend(data map[string]interface{}){
-    b, _ := json.MarshalIndent(data, "", " ")
-
-    fmt.Println("[CLIENT] SENT: ", string(b))
-}
-
-func (c CustomEvents) onSendError(err error){
-    fmt.Println("[CLIENT] Failed to send: ", err)
+// OnSendError event interface implementation
+func (e Events) OnSendError(err error){
+	if err == err.(*net.OpError) {
+		slog.Error("server was closed")
+	} else {
+		slog.Error("unexpected send error: ", "reason", err)
+	}
 }
 
 ```
 
-# CLIENT (client.go)
+## CLIENT (client.go)
 
 <p>
-    Start the client. Place client.Receive() in a goroutine so you have the main thread free for other operations. Free the waitGroup when you are done.
+    Connect and interact with a socket server made with github.com/G-MAKROGLOU/websocket-server
 </p>
 
 
@@ -84,49 +70,249 @@ func (c CustomEvents) onSendError(err error){
 package main
 
 import (
-    "fmt"
+    "log/slog"
     client "github.com/G-MAKROGLOU/websocket-client"
-    "sync"
-    "time"
 )
 
-var wg sync.WaitGroup
-
 func main() {
-    wg.Add(1)
+    
+    // setup the client 
+    origin := "http://localhost:3000"
+    server := "ws://localhost:3000/ws"
 
-    origin := "http://localhost"
-    server := "ws://localhost:5000/ws"
-
-    client := client.NewSocketClient(origin, server, CustomEvents{})
-
-    client.Connect()
-
-    client.Join("testRoom")
-
-    go client.Receive()
-
-    go testMulticast(client, "CLIENT1")
-
-    wg.Wait()
-}
-
-func testMulticast(client *client.SocketClient, clientName string) {
-    index := 0
-    for {
-	if index == 10 {
-	    fmt.Println("[MULTICAST] DISCONNECTING CLIENT: ", client.ID)
-	    client.Disconnect()
-	    break
+    //connect
+	c1 := client.New(origin, server, C1Events{})
+	if err := c1.Connect(); err != nil {
+		slog.Error("failed to connect to server")
+		os.Exit(1)
 	}
-	time.Sleep(5 * time.Second)
 
-	data := map[string]interface{}{
-		"Message": "[FROM] [" + clientName + "] " + client.ID + " TO ROOM: testRoom",	
+    // start listening for incoming messages in a goroutine
+	go c1.ReceiveJSON()
+
+    // broadcast a message to all connected clients
+    data = map[string]interface{}{
+		"msg": "pong",
 	}
-	client.SendTo("testRoom", data)
-	index++
-    }
+	c2.SendJSON(data)
+
+    // join a room
+	c1.Join("test")
+
+    // mutlicast a message to a room
+    c1.SendJSONTo("test", data)
+
+    // leave a room
+    c1.Leave("test")
+
+    // disconnect
+    c1.Disconnect()
 }
 
 ```
+
+
+# Plain Text client for connection with any server that sends text (e.g aisstream)
+
+## CLIENT (clientevents.go)
+
+<p>
+    Implement the events interface with the functionality you want to be implemented per event. 
+    Leave empty for no actions on a specific event.
+</p>
+
+
+```go
+package main
+
+import (
+    "encoding/json"
+    "fmt"
+    aisstream "github.com/aisstream/ais-message-models/golang/aisStream"
+)
+
+// Events implements SocketClientEvents interface
+type Events struct {}
+
+// OnDisconnectError event interface implementation
+func (e Events) OnDisconnectError(err error){
+	fmt.Println("OnDisconnectError: ", err)
+}
+
+// OnReceive event interface implementation
+func (e Events) OnReceive(data map[string]interface{}){
+	var res aisstream.AisStreamMessage
+
+	b, _ := json.Marshal(data)
+
+	json.Unmarshal(b, &res)
+
+	switch(res.MessageType) {
+		case aisstream.POSITION_REPORT:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.UNKNOWN_MESSAGE:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.ADDRESSED_SAFETY_MESSAGE:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.ADDRESSED_BINARY_MESSAGE:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.AIDS_TO_NAVIGATION_REPORT:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.ASSIGNED_MODE_COMMAND:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.BASE_STATION_REPORT:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.BINARY_ACKNOWLEDGE:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.BINARY_BROADCAST_MESSAGE:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.CHANNEL_MANAGEMENT:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.COORDINATED_UTC_INQUIRY:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.DATA_LINK_MANAGEMENT_MESSAGE:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.DATA_LINK_MANAGEMENT_MESSAGE_DATA:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.EXTENDED_CLASS_B_POSITION_REPORT:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.GROUP_ASSIGNMENT_COMMAND:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.GNSS_BROADCAST_BINARY_MESSAGE:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.INTERROGATION:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.LONG_RANGE_AIS_BROADCAST_MESSAGE:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.MULTI_SLOT_BINARY_MESSAGE:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.SAFETY_BROADCAST_MESSAGE:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.SHIP_STATIC_DATA:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.SINGLE_SLOT_BINARY_MESSAGE:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.STANDARD_CLASS_B_POSITION_REPORT:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.STANDARD_SEARCH_AND_RESCUE_AIRCRAFT_REPORT:
+			fmt.Println(res.MessageType)
+			break
+		case aisstream.STATIC_DATA_REPORT:
+			fmt.Println(res.MessageType)
+			break		
+	}
+}
+
+// OnReceiveError event interface implementation
+func (e Events) OnReceiveError(err error){
+	if err == io.EOF {
+		fmt.Println("connection closed ")
+	} else {
+		fmt.Println("some error during receive")
+	}
+}
+
+// OnJoinError event interface implementation
+func (e Events) OnJoinError(roomName string, err error){}
+
+// OnLeaveError event interface implementation
+func (e Events) OnLeaveError(roomName string, err error){}
+
+// OnSendError event interface implementation
+func (e Events) OnSendError(err error){
+	if err == err.(*net.OpError) {
+		slog.Error("server was closed")
+	} else {
+		slog.Error("unexpected send error: ", "reason", err)
+	}
+}
+
+```
+
+
+## CLIENT (client.go)
+
+
+```go
+package main
+
+import (
+	"sync"
+
+	client "github.com/G-MAKROGLOU/websocket-client"
+    aisstream "github.com/aisstream/ais-message-models/golang/aisStream"
+)
+
+var waitG sync.WaitGroup
+
+var apiKey = "YOUR-API-KEY"
+
+func main() {
+    // simulate blocking
+    waitG.Add(1)
+
+    // setup the client
+	origin := "https://stream.aisstream.io"
+	server := "wss://stream.aisstream.io/v0/stream"
+
+    //connect
+	c1 := client.New(origin, server, C1Events{})
+
+	if err := c1.Connect(); err != nil {
+		slog.Error("failed to connect to server")
+		os.Exit(1)
+	}
+
+    // start listening for incoming messages in a goroutine. handle incoming messages
+    // in OnReceive event
+	go c.ReceiveText()
+
+    // send the init message to start receiving text
+    msg := aisstream.SubscriptionMessage{
+		APIKey: apiKey,
+		BoundingBoxes: [][][]float64{{ {-90.0, -180.0}, { 90.0, 180.0 }}},
+		FiltersShipMMSI: []string{},
+	}
+
+	c.SendText(msg)
+
+    // simulate end of operations
+    go func() {
+        time.Sleep(20 * time.Second)
+        c.Disconnect()        
+        waitG.Done()
+    }()
+
+    // simulate blocking
+    waitG.Wait()
+}
+
+```
+
+
+### NOTES
+
+The events are soon going to change and be reducted to a few useful events. For example, OnError(err error) instead of multiple On*Error(err error).

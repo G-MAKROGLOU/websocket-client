@@ -44,7 +44,7 @@ func TestConnect(t *testing.T){
 	time.Sleep(5 * time.Second)
 
 	if c.Conn != nil {
-		err := c.Disconnect()
+		c.Disconnect()
 		assert.Nil(t, nil, err)
 	}
 
